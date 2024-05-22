@@ -16,7 +16,9 @@ func addHandlers(mux *http.ServeMux, apiConf apiConfig) {
 	mux.HandleFunc("GET /v1/err", err)
 
 	mux.HandleFunc("POST /v1/users", apiConf.createUsers)
-	mux.HandleFunc("GET /v1/users", apiConf.getUserByKey)
+	mux.HandleFunc("GET /v1/users", apiConf.middlewareAuth(apiConf.getUserAuthed))
+
+	mux.HandleFunc("POST /v1/feeds", apiConf.middlewareAuth(apiConf.createFeed))
 }
 
 func main() {

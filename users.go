@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -37,7 +36,6 @@ func (apiConf *apiConfig) createUsers(w http.ResponseWriter, req *http.Request) 
 		log.Println("Error whil generating UUID in createUsers")
 		return
 	}
-	ctx := context.Background()
 	dbParams := database.CreateUserParams{
 		ID:        uuid,
 		CreatedAt: time.Now(),
@@ -45,7 +43,7 @@ func (apiConf *apiConfig) createUsers(w http.ResponseWriter, req *http.Request) 
 		Name:      params.Name,
 	}
 
-	user, err := apiConf.DB.CreateUser(ctx, dbParams)
+	user, err := apiConf.DB.CreateUser(req.Context(), dbParams)
 	if err != nil {
 		log.Println("Error while creating user in database\n" + err.Error())
 		return
@@ -60,24 +58,13 @@ func (apiConf *apiConfig) createUsers(w http.ResponseWriter, req *http.Request) 
 	})
 }
 
-func (apiConf *apiConfig) getUserByKey(w http.ResponseWriter, req *http.Request) {
-	authString, err := extractAuthHeader(req, "ApiKey")
+func (apiConf *apiConfig) getUserAuthed(w http.ResponseWriter, req *http.Request, user database.User) {
 	type responseShape struct {
 		Id        uuid.UUID `json:"id"`
 		CreatedAt time.Time `json:"created_at"`
 		UpdatedAt time.Time `json:"updated_at"`
 		Name      string    `json:"name"`
 		ApiKey    string    `json:"api_key"`
-	}
-
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Invalid Authorization header.")
-		return
-	}
-
-	user, err := apiConf.DB.GetUserByApiKey(context.Background(), authString)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Could not retreive user from Database")
 	}
 
 	respondWithJSON(w, http.StatusOK, responseShape{
