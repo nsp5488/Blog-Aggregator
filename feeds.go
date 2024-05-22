@@ -59,3 +59,39 @@ func (apiConf *apiConfig) createFeed(w http.ResponseWriter, req *http.Request, u
 		UserID:    feed.UserID,
 	})
 }
+
+func (apiConf *apiConfig) getFeeds(w http.ResponseWriter, req *http.Request) {
+	feeds, err := apiConf.DB.GetFeeds(req.Context())
+
+	if err != nil {
+		log.Println("Unable to retrieve feeds!")
+		respondWithError(w, http.StatusInternalServerError, "Could not retreive feeds at this time.")
+	}
+
+	type respFeed struct {
+		ID        uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Name      string    `json:"name"`
+		Url       string    `json:"url"`
+		UserID    uuid.UUID `json:"user_id"`
+	}
+	type responseBody struct {
+		Feeds []respFeed `json:"feeds"`
+	}
+
+	responseStruct := responseBody{}
+	responseStruct.Feeds = make([]respFeed, len(feeds))
+
+	for i, feed := range feeds {
+		responseStruct.Feeds[i] = respFeed{
+			ID:        feed.ID,
+			CreatedAt: feed.CreatedAt,
+			UpdatedAt: feed.UpdatedAt,
+			Name:      feed.Name,
+			Url:       feed.Url,
+			UserID:    feed.UserID,
+		}
+	}
+	respondWithJSON(w, http.StatusOK, responseStruct)
+}
