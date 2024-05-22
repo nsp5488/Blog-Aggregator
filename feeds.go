@@ -19,6 +19,17 @@ type responseFeed struct {
 	UserID    uuid.UUID `json:"user_id"`
 }
 
+func convDBFeedToResp(dbFeed database.Feed) responseFeed {
+	return responseFeed{
+		ID:        dbFeed.ID,
+		CreatedAt: dbFeed.CreatedAt,
+		UpdatedAt: dbFeed.UpdatedAt,
+		Name:      dbFeed.Name,
+		Url:       dbFeed.Url,
+		UserID:    dbFeed.UserID,
+	}
+}
+
 func (apiConf *apiConfig) createFeed(w http.ResponseWriter, req *http.Request, user database.User) {
 	type parameters struct {
 		Name string `json:"name"`
@@ -65,21 +76,8 @@ func (apiConf *apiConfig) createFeed(w http.ResponseWriter, req *http.Request, u
 		log.Fatal("Error while creating follow relation between user and feed")
 	}
 	respBody := responseBody{
-		Feed: responseFeed{
-			ID:        feed.ID,
-			CreatedAt: feed.CreatedAt,
-			UpdatedAt: feed.UpdatedAt,
-			Name:      feed.Name,
-			Url:       feed.Url,
-			UserID:    feed.UserID,
-		},
-		FeedFollow: responseFeedFollow{
-			ID:        feedFollow.ID,
-			UserID:    feedFollow.UserID,
-			FeedID:    feedFollow.FeedID,
-			CreatedAt: feedFollow.CreatedAt,
-			UpdatedAt: feedFollow.UpdatedAt,
-		},
+		Feed:       convDBFeedToResp(feed),
+		FeedFollow: convDBFeedFollowToResp(feedFollow),
 	}
 	respondWithJSON(w, http.StatusCreated, respBody)
 }
@@ -95,14 +93,7 @@ func (apiConf *apiConfig) getFeeds(w http.ResponseWriter, req *http.Request) {
 	respBody := make([]responseFeed, len(feeds))
 
 	for i, feed := range feeds {
-		respBody[i] = responseFeed{
-			ID:        feed.ID,
-			CreatedAt: feed.CreatedAt,
-			UpdatedAt: feed.UpdatedAt,
-			Name:      feed.Name,
-			Url:       feed.Url,
-			UserID:    feed.UserID,
-		}
+		respBody[i] = convDBFeedToResp(feed)
 	}
 	respondWithJSON(w, http.StatusOK, respBody)
 }

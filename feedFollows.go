@@ -17,6 +17,16 @@ type responseFeedFollow struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+func convDBFeedFollowToResp(feedFollow database.FeedFollow) responseFeedFollow {
+	return responseFeedFollow{
+		ID:        feedFollow.ID,
+		FeedID:    feedFollow.FeedID,
+		UserID:    feedFollow.UserID,
+		CreatedAt: feedFollow.CreatedAt,
+		UpdatedAt: feedFollow.UpdatedAt,
+	}
+}
+
 func (apiConf *apiConfig) followFeed(w http.ResponseWriter, req *http.Request, user database.User) {
 	type parameters struct {
 		FeedId uuid.UUID `json:"feed_id"`
@@ -43,13 +53,7 @@ func (apiConf *apiConfig) followFeed(w http.ResponseWriter, req *http.Request, u
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, responseFeedFollow{
-		ID:        feedFollow.ID,
-		FeedID:    feedFollow.FeedID,
-		UserID:    feedFollow.UserID,
-		CreatedAt: feedFollow.CreatedAt,
-		UpdatedAt: feedFollow.UpdatedAt,
-	})
+	respondWithJSON(w, http.StatusCreated, convDBFeedFollowToResp(feedFollow))
 }
 
 func (apiConf *apiConfig) unfollowFeed(w http.ResponseWriter, req *http.Request, _ database.User) {
@@ -77,13 +81,7 @@ func (apiConf *apiConfig) getFollowedFeeds(w http.ResponseWriter, req *http.Requ
 	respBody := make([]responseFeedFollow, len(feedFollows))
 
 	for i, feedFollow := range feedFollows {
-		respBody[i] = responseFeedFollow{
-			ID:        feedFollow.ID,
-			FeedID:    feedFollow.FeedID,
-			UserID:    feedFollow.UserID,
-			CreatedAt: feedFollow.CreatedAt,
-			UpdatedAt: feedFollow.UpdatedAt,
-		}
+		respBody[i] = convDBFeedFollowToResp(feedFollow)
 	}
 	respondWithJSON(w, http.StatusOK, respBody)
 }

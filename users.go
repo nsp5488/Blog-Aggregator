@@ -10,17 +10,27 @@ import (
 	"github.com/nsp5488/blog_aggregator/internal/database"
 )
 
+type responseUser struct {
+	Id        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Name      string    `json:"name"`
+	ApiKey    string    `json:"api_key"`
+}
+
+func convDBUserToResp(user database.User) responseUser {
+	return responseUser{
+		Id:        user.ID,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+		Name:      user.Name,
+		ApiKey:    user.ApiKey,
+	}
+}
+
 func (apiConf *apiConfig) createUsers(w http.ResponseWriter, req *http.Request) {
 	type parameters struct {
 		Name string `json:"name"`
-	}
-
-	type responseShape struct {
-		Id        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Name      string    `json:"name"`
-		ApiKey    string    `json:"api_key"`
 	}
 
 	decoder := json.NewDecoder(req.Body)
@@ -44,30 +54,9 @@ func (apiConf *apiConfig) createUsers(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, responseShape{
-		Id:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Name:      user.Name,
-		ApiKey:    user.ApiKey,
-	})
+	respondWithJSON(w, http.StatusCreated, convDBUserToResp(user))
 }
 
 func (apiConf *apiConfig) getUserAuthed(w http.ResponseWriter, req *http.Request, user database.User) {
-	type responseShape struct {
-		Id        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Name      string    `json:"name"`
-		ApiKey    string    `json:"api_key"`
-	}
-
-	respondWithJSON(w, http.StatusOK, responseShape{
-		Id:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Name:      user.Name,
-		ApiKey:    user.ApiKey,
-	})
-
+	respondWithJSON(w, http.StatusOK, convDBUserToResp)
 }
