@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
+	"strings"
 )
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
@@ -20,15 +22,30 @@ func respondWithJSON(w http.ResponseWriter, code int, content interface{}) {
 
 	data, err := json.Marshal(content)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Println(err.Error())
 		return
 	}
 
 	_, err = w.Write(data)
 
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Println(err.Error())
 	}
+}
+func extractAuthHeader(req *http.Request, authType string) (string, error) {
+	s := req.Header.Get("Authorization")
+
+	if s == "" {
+		return "", errors.New("no authorization header provided")
+	}
+
+	authString, found := strings.CutPrefix(s, authType+" ")
+
+	if !found {
+		return "", errors.New("authorization header type mismatch")
+	}
+	return authString, nil
+
 }
 
 func readiness(w http.ResponseWriter, req *http.Request) {
