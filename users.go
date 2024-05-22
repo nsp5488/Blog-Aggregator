@@ -31,13 +31,8 @@ func (apiConf *apiConfig) createUsers(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	uuid, err := uuid.NewUUID()
-	if err != nil {
-		log.Println("Error whil generating UUID in createUsers")
-		return
-	}
 	dbParams := database.CreateUserParams{
-		ID:        uuid,
+		ID:        generateUUID(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 		Name:      params.Name,

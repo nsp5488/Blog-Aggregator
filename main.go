@@ -20,6 +20,10 @@ func addHandlers(mux *http.ServeMux, apiConf apiConfig) {
 
 	mux.HandleFunc("POST /v1/feeds", apiConf.middlewareAuth(apiConf.createFeed))
 	mux.HandleFunc("GET /v1/feeds", apiConf.getFeeds)
+
+	mux.HandleFunc("POST /v1/feed_follows", apiConf.middlewareAuth(apiConf.followFeed))
+	mux.HandleFunc("DELETE /v1/feed_follows/{feedFollowID}", apiConf.middlewareAuth(apiConf.unfollowFeed))
+	mux.HandleFunc("GET /v1/feed_follows", apiConf.middlewareAuth(apiConf.getFollowedFeeds))
 }
 
 func main() {

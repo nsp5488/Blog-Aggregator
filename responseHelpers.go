@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
@@ -46,6 +48,14 @@ func extractAuthHeader(req *http.Request, authType string) (string, error) {
 	}
 	return authString, nil
 
+}
+
+func generateUUID() uuid.UUID {
+	uuid, err := uuid.NewV6()
+	if err != nil {
+		log.Fatal("Could not generate a new UUID!")
+	}
+	return uuid
 }
 
 func readiness(w http.ResponseWriter, req *http.Request) {

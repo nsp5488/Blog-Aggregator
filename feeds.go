@@ -10,6 +10,15 @@ import (
 	"github.com/nsp5488/blog_aggregator/internal/database"
 )
 
+type responseFeed struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Name      string    `json:"name"`
+	Url       string    `json:"url"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
 func (apiConf *apiConfig) createFeed(w http.ResponseWriter, req *http.Request, user database.User) {
 	type parameters struct {
 		Name string `json:"name"`
@@ -17,12 +26,8 @@ func (apiConf *apiConfig) createFeed(w http.ResponseWriter, req *http.Request, u
 	}
 
 	type responseBody struct {
-		ID        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Name      string    `json:"name"`
-		Url       string    `json:"url"`
-		UserID    uuid.UUID `json:"user_id"`
+		Feed       responseFeed       `json:"feed"`
+		FeedFollow responseFeedFollow `json:"feed_follow"`
 	}
 
 	params := parameters{}
@@ -33,12 +38,9 @@ func (apiConf *apiConfig) createFeed(w http.ResponseWriter, req *http.Request, u
 		respondWithError(w, http.StatusBadRequest, "Unable to decode request")
 		return
 	}
-	uuid, err := uuid.NewV6()
-	if err != nil {
-		log.Fatal("Unable to allocate new UUID")
-	}
+
 	dbParams := database.CreateFeedParams{
-		ID:        uuid,
+		ID:        generateUUID(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 		Name:      params.Name,
@@ -48,16 +50,38 @@ func (apiConf *apiConfig) createFeed(w http.ResponseWriter, req *http.Request, u
 	feed, err := apiConf.DB.CreateFeed(req.Context(), dbParams)
 	if err != nil {
 		log.Println("Unable to create feed")
+		respondWithError(w, http.StatusBadRequest, "Unable to create feed")
 		return
 	}
-	respondWithJSON(w, http.StatusCreated, responseBody{
-		ID:        feed.ID,
-		CreatedAt: feed.CreatedAt,
-		UpdatedAt: feed.UpdatedAt,
-		Name:      feed.Name,
-		Url:       feed.Url,
+	feedFollow, err := apiConf.DB.FollowFeed(req.Context(), database.FollowFeedParams{
+		ID:        generateUUID(),
 		UserID:    feed.UserID,
+		FeedID:    feed.ID,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	})
+
+	if err != nil {
+		log.Fatal("Error while creating follow relation between user and feed")
+	}
+	respBody := responseBody{
+		Feed: responseFeed{
+			ID:        feed.ID,
+			CreatedAt: feed.CreatedAt,
+			UpdatedAt: feed.UpdatedAt,
+			Name:      feed.Name,
+			Url:       feed.Url,
+			UserID:    feed.UserID,
+		},
+		FeedFollow: responseFeedFollow{
+			ID:        feedFollow.ID,
+			UserID:    feedFollow.UserID,
+			FeedID:    feedFollow.FeedID,
+			CreatedAt: feedFollow.CreatedAt,
+			UpdatedAt: feedFollow.UpdatedAt,
+		},
+	}
+	respondWithJSON(w, http.StatusCreated, respBody)
 }
 
 func (apiConf *apiConfig) getFeeds(w http.ResponseWriter, req *http.Request) {
@@ -68,23 +92,10 @@ func (apiConf *apiConfig) getFeeds(w http.ResponseWriter, req *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "Could not retreive feeds at this time.")
 	}
 
-	type respFeed struct {
-		ID        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Name      string    `json:"name"`
-		Url       string    `json:"url"`
-		UserID    uuid.UUID `json:"user_id"`
-	}
-	type responseBody struct {
-		Feeds []respFeed `json:"feeds"`
-	}
-
-	responseStruct := responseBody{}
-	responseStruct.Feeds = make([]respFeed, len(feeds))
+	respBody := make([]responseFeed, len(feeds))
 
 	for i, feed := range feeds {
-		responseStruct.Feeds[i] = respFeed{
+		respBody[i] = responseFeed{
 			ID:        feed.ID,
 			CreatedAt: feed.CreatedAt,
 			UpdatedAt: feed.UpdatedAt,
@@ -93,5 +104,5 @@ func (apiConf *apiConfig) getFeeds(w http.ResponseWriter, req *http.Request) {
 			UserID:    feed.UserID,
 		}
 	}
-	respondWithJSON(w, http.StatusOK, responseStruct)
+	respondWithJSON(w, http.StatusOK, respBody)
 }
