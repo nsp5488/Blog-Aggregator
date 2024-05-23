@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
 	"io"
 	"log"
@@ -9,8 +10,33 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nsp5488/blog_aggregator/internal/database"
 )
+
+func makePostStruct(item RSSItem, feedId uuid.UUID) database.CreatePostParams {
+	t, err := time.Parse(time.RFC1123Z, item.PubDate)
+	if err != nil {
+		return database.CreatePostParams{}
+	}
+	str_is_val := item.Description != ""
+	return database.CreatePostParams{
+		ID:        generateUUID(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Title:     item.Title,
+		Url:       item.Link,
+		Description: sql.NullString{
+			String: item.Description,
+			Valid:  str_is_val,
+		},
+		PublishedAt: sql.NullTime{
+			Time:  t,
+			Valid: true,
+		},
+		FeedID: feedId,
+	}
+}
 
 func (apiConf *apiConfig) startWorker(num_items, delayInSeconds int) {
 	log.Println("BG_WORKER_LOG: starting worker")
@@ -35,8 +61,16 @@ func (apiConf *apiConfig) startWorker(num_items, delayInSeconds int) {
 					return
 				}
 				// todo save this data to the DB.
-				log.Printf("Fetched %s FROM %s successfully!", RssBody.Channel.Title, feed.Url)
+				for _, item := range RssBody.Channel.Item {
+					apiConf.DB.CreatePost(context.Background(), makePostStruct(item, feed.ID))
+				}
 			}(feed)
+			apiConf.DB.MarkFeedFetched(context.Background(),
+				database.MarkFeedFetchedParams{
+					ID: feed.ID, UpdatedAt: time.Now(),
+					LastFetchedAt: sql.NullTime{Time: time.Now(),
+						Valid: true,
+					}})
 		}
 
 		// wait
@@ -46,20 +80,22 @@ func (apiConf *apiConfig) startWorker(num_items, delayInSeconds int) {
 	}
 }
 
+type RSSItem struct {
+	Text        string `xml:",chardata"`
+	Title       string `xml:"title"`
+	Link        string `xml:"link"`
+	PubDate     string `xml:"pubDate"`
+	Description string `xml:"description"`
+}
+
 type RssBody struct {
 	Channel struct {
 		Title string `xml:"title"`
 		Link  struct {
 			Href string `xml:"href,attr"`
 		} `xml:"link"`
-		Description string `xml:"description"`
-		Item        []struct {
-			Text        string `xml:",chardata"`
-			Title       string `xml:"title"`
-			Link        string `xml:"link"`
-			PubDate     string `xml:"pubDate"`
-			Description string `xml:"description"`
-		} `xml:"item"`
+		Description string    `xml:"description"`
+		Item        []RSSItem `xml:"item"`
 	} `xml:"channel"`
 }
 
