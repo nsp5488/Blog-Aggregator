@@ -52,7 +52,7 @@ func main() {
 		Addr:    "localhost:" + port,
 		Handler: mux,
 	}
-
+	apiConf.startWorker(1, 120)
 	log.Fatal(server.ListenAndServe())
 
 }
