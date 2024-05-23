@@ -24,6 +24,8 @@ func addHandlers(mux *http.ServeMux, apiConf apiConfig) {
 	mux.HandleFunc("POST /v1/feed_follows", apiConf.middlewareAuth(apiConf.followFeed))
 	mux.HandleFunc("DELETE /v1/feed_follows/{feedFollowID}", apiConf.middlewareAuth(apiConf.unfollowFeed))
 	mux.HandleFunc("GET /v1/feed_follows", apiConf.middlewareAuth(apiConf.getFollowedFeeds))
+
+	mux.HandleFunc("GET /v1/posts", apiConf.middlewareAuth(apiConf.getPosts))
 }
 
 func main() {
@@ -52,7 +54,7 @@ func main() {
 		Addr:    "localhost:" + port,
 		Handler: mux,
 	}
-	apiConf.startWorker(1, 120)
+	go apiConf.startWorker(1, 120)
 	log.Fatal(server.ListenAndServe())
 
 }
